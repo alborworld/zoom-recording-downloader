@@ -1,0 +1,1 @@
+0 5 * * * python3 /app/zoom-recording-downloader.py >> /var/log/zoom-recording-downloader.log 2>&1
