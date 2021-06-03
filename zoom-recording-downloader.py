@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # Program Name: zoom-recording-downloader.py
 # Description:  Zoom Recording Downloader is a cross-platform Python script
@@ -20,12 +21,11 @@ from tqdm import tqdm
 from sys import exit
 from signal import signal, SIGINT
 from dateutil.parser import parse
-import argparse
 from datetime import date, timedelta
 import requests
 import os
+import time
 from os import environ
-from pathlib import Path
 
 APP_VERSION = "3.0"
 
@@ -245,10 +245,14 @@ def main():
 
     for email, user_id, first_name, last_name in users:
         print(color.BOLD + "\nGetting recording list for {} {} ({})"
-              .format(first_name, last_name, email) + color.END)
+              .format(first_name.encode('utf-8'), last_name.encode('utf-8'),
+                      email) + color.END)
+
         # Wait n.n seconds so we don't breach the API rate limit
-        # time.sleep(0.1)
-        recordings = list_recordings(user_id)
+        time.sleep(0.1)
+
+        #recordings = list_recordings(user_id)
+        recordings = list_recordings(email)
         total_count = len(recordings)
         print("==> Found {} recordings".format(total_count))
 
