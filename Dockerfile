@@ -2,8 +2,11 @@
 FROM mhoycss/ubuntu-python3:latest
 RUN apt-get update && apt-get -y install cron
 
-# Copy cron setup file to the cron.d directory
-COPY cron /etc/cron.d/cron
+ARG CRON_SETTINGS="0 5 * * *"
+ENV CRON_SETTINGS=${CRON_SETTINGS}
+
+# Create setup file in the cron.d directory
+RUN echo "$CRON_SETTINGS python3 /app/zoom-recording-downloader.py >> /var/log/zoom-recording-downloader.log 2>&1" > /etc/cron.d/cron
 
 # Give execution rights on the cron job
 RUN chmod 0644 /etc/cron.d/cron
