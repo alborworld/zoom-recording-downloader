@@ -23,7 +23,7 @@ docker run -d \
 
 where JWT_TOKEN env variable is the JSON Web Token (see [Important Notes](#Important-Notes)).
 
-Note that a host folder where the recordings will be stored must be bind mounted to the `/download` folder within the container.
+Note that a host folder where the recordings will be stored must be bind mounted to the `/downloads` folder within the container.
 
 That's it.
 
