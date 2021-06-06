@@ -59,6 +59,6 @@ To set it up you need to use the Synology Docker app, download the container, ru
 1. Under *Volume* add the folder where you want the recordings, and bind it to the /downloads container folder
 1. Under *Environment* set:
     * CRON_SETTINGS with the job settings you want (see Wikipedia for the syntax)
-    * JWT_TOKEN with your JSON Web Token. 
+    * JWT_TOKEN with your JSON Web Token (with an expiration time quite far in the future)
    
 
