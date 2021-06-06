@@ -4,6 +4,8 @@
 
 **Zoom Recording Downloader** is a docker container that uses Zoom's API (v2) to download and organize all cloud recordings from a Zoom account onto local storage.
 
+It downloads, at a specified time, all the recordings in the folder you desire, organized by author (email) and meeting.
+
 The python code has been forked (and adapted) from [zoom-recording-downloader](https://github.com/ricardorodrigues-ca/zoom-recording-downloader) by [Ricardo Rodrigues](https://github.com/ricardorodrigues-ca).
 
 # How to use?
@@ -26,7 +28,6 @@ where JWT_TOKEN env variable is the JSON Web Token (see [Important Notes](#Impor
 Note that a host folder where the recordings will be stored must be bind mounted to the `/downloads` folder within the container.
 
 That's it.
-
 
 ## Environment variables
 
@@ -59,6 +60,5 @@ To set it up you need to use the Synology Docker app, download the container, ru
 1. Under *Environment* set:
     * CRON_SETTINGS with the job settings you want (see Wikipedia for the syntax)
     * JWT_TOKEN with your JSON Web Token. 
-
-That will download, at the specified time in the cron settings, all the recordings in the folder you desire, organized by author (email) and meeting.
+   
 
