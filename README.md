@@ -55,7 +55,7 @@ The docker container can be used with any other environment, however here follow
 
 To set it up you need to use the Synology Docker app, download the container, run it and specify (in *Advanced Settings*):
 1. Enable auto-restart
-1. Under *Volume* the folder where you want the recordings, and bind it to the /downloads container folder
+1. Under *Volume* add the folder where you want the recordings, and bind it to the /downloads container folder
 1. Under *Environment* set:
     * CRON_SETTINGS with the job settings you want (see Wikipedia for the syntax)
     * JWT_TOKEN with your JSON Web Token. 
