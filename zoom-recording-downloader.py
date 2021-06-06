@@ -304,7 +304,7 @@ def main():
 
 
 if __name__ == "__main__":
-    # Tell Python to run the handler() function when SIGINT is recieved
+    # Tell Python to run the handler() function when SIGINT is received
     signal(SIGINT, handler)
 
     main()
