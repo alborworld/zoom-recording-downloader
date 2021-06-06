@@ -35,7 +35,7 @@ This image uses environment variables for configuration.
 |Available variables |Default value |Description                                         |
 |--------------------|--------------|----------------------------------------------------|
 |`JWT_TOKEN`         |no default    |The JSON Web Token from your JWT app (see [Important Notes](#Important-Notes))    |
-|`CRON_SETTINGS`     |`0 5 * * *`   |Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download |
+|`CRON_SETTINGS`     |`0 5 * * *`   |Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download. **IMPORTANT: the time is in UTC**. |
 
 
 ## Important Notes ##
