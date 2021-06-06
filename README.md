@@ -15,7 +15,7 @@ and run it with all needed parameters:
 ```console
 docker run -d \
     -v [HOST DOWNLOAD FOLDER]:/downloads \
-    --name zoom-downloader \
+    --name zoom-recording-downloader \
     -e JWT_TOKEN=$JWT_TOKEN \
     -e CRON_SETTINGS="0 17 * * *" \
     zoom_downloader:v0.1
