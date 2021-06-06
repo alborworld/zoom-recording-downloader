@@ -52,7 +52,7 @@ To execute the container you need a variable called `JWT_TOKEN` that contains th
 # Synology DiskStation
 
 This project was initially created with the intention to automatically download the Zoom recordings to a Synology DiskStation. 
-The docker container can be used with any other environment, however here follow a small description on what to do in the DiskStation.
+The docker container can be used with any other environment, however here follows a small description of what to do in the DiskStation.
 
 To set it up you need to use the Synology Docker app, download the container, run it and specify (in *Advanced Settings*):
 1. *Enable auto-restart*
