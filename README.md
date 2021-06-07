@@ -6,6 +6,8 @@
 
 It downloads, at a specified time, all the recordings in the folder you desire, organized by author (email) and meeting.
 
+This is useful for instance when managing a Zoom account with several users, that have periodic meetings and webinars, and store all the lectures in the cloud – which is going to be filled very easily.
+
 The python code has been forked (and adapted) from [zoom-recording-downloader](https://github.com/ricardorodrigues-ca/zoom-recording-downloader) by [Ricardo Rodrigues](https://github.com/ricardorodrigues-ca).
 
 # How to use?
