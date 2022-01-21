@@ -88,6 +88,11 @@ def get_user_ids():
     response = requests.get(url=API_ENDPOINT_USER_LIST,
                             headers=AUTHORIZATION_HEADER)
     page_data = response.json()
+
+    if 'message' in page_data:
+        print("Failed downloading recording: %s" % page_data['message'])
+        return None
+
     total_pages = int(page_data['page_count']) + 1
 
     # Results will be appended to this list
@@ -242,6 +247,10 @@ def main():
 
     print(color.BOLD + "Getting user accounts..." + color.END)
     users = get_user_ids()
+
+    # If no users are found, exit
+    if users == None:
+        exit(0)
 
     for email, user_id, first_name, last_name in users:
         print(color.BOLD + "\nGetting recording list for {} {} ({})"
