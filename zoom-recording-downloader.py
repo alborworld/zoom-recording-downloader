@@ -15,8 +15,11 @@
 # Environment variables:
 # JWT_TOKEN: the JWT token to use
 # DOWNLOAD_DIRECTORY: the directory where to download the recordings
+#
+# Parameters:
+# --no-delete: doesn't delete the recordings in the Zoom account
 
-# Import TQDM progress bar library
+import argparse
 from tqdm import tqdm
 from sys import exit
 from signal import signal, SIGINT
@@ -215,7 +218,7 @@ def handler(signal_received, frame):
 # #                        MAIN                                  #
 # ################################################################
 
-def main():
+def main(delete_recordings):
 
     # Clear the screen buffer
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -294,12 +297,13 @@ def main():
                     success = False
 
             if success:
-                # If successful, write the ID of this recording to the completed
-                # file
-                print("==> Deleting cloud recording ({}): {}".format(index + 1,
-                                                                     meeting_id))
-                delete_meeting_recordings(meeting_id)
+                # Delete the recordings only if parameter --no-delete has not been specified
+                if delete_recordings:
+                    print("==> Deleting cloud recording ({}): {}".format(index + 1,
+                                                                        meeting_id))
+                    delete_meeting_recordings(meeting_id)
 
+                # Write the ID of this recording to the completed file
                 with open(COMPLETED_MEETING_IDS_LOG, 'a') as log:
                     COMPLETED_MEETING_IDS.add(meeting_id)
                     log.write(meeting_id)
@@ -316,4 +320,9 @@ if __name__ == "__main__":
     # Tell Python to run the handler() function when SIGINT is received
     signal(SIGINT, handler)
 
-    main()
+    parser = argparse.ArgumentParser(description="My parser")
+    parser.add_argument('--no-delete', dest='delete_recordings', default=True, action='store_false', help="Don't delete the recordings in the Zoom account")
+
+    args = parser.parse_args()
+
+    main(args.delete_recordings)
