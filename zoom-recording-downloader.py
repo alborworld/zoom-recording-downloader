@@ -24,13 +24,13 @@ from tqdm import tqdm
 from sys import exit
 from signal import signal, SIGINT
 from dateutil.parser import parse
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import requests
 import os
 import time
 from os import environ
 
-APP_VERSION = "3.0"
+APP_VERSION = "3.1"
 
 if environ.get('JWT_TOKEN') is None:
     print("Error: environment variable JWT_TOKEN not defined.")
@@ -248,6 +248,8 @@ def main(delete_recordings):
 
     load_completed_meeting_ids()
 
+    print((color.BOLD + color.GREEN + "\n*** Starting at %s ***" + color.END + "\n") % datetime.now())
+
     print(color.BOLD + "Getting user accounts..." + color.END)
     users = get_user_ids()
 
@@ -311,6 +313,7 @@ def main(delete_recordings):
                     log.flush()
 
     print(color.BOLD + color.GREEN + "\n*** All done! ***" + color.END)
+    print((color.BOLD + color.GREEN + "\n*** Ending at %s ***" + color.END + "\n") % datetime.now())
     save_location = os.path.abspath(DOWNLOAD_DIRECTORY)
     print(color.BLUE + "\nRecordings have been saved to: " +
           color.UNDERLINE + "{}".format(save_location) + color.END + "\n")
