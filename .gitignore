@@ -20,4 +20,8 @@ completed-downloads.log
 *.code-workspace
 
 # Ignore Intellij folder
-idea
+.idea
+
+# Ignore python stuff
+.python-version
+env
