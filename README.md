@@ -20,9 +20,10 @@ and run it with all needed parameters:
 docker run -d \
     -v [HOST DOWNLOAD FOLDER]:/downloads \
     --name zoom-recording-downloader \
+    -e TZ=Europe/Amsterdam \
     -e JWT_TOKEN=$JWT_TOKEN \
     -e CRON_SETTINGS="0 17 * * *" \
-    zoom_downloader:v0.1
+    zoom-recording-downloader:latest
 ```
 
 where JWT_TOKEN env variable is the JSON Web Token (see [Important Notes](#Important-Notes)).
@@ -35,11 +36,11 @@ That's it.
 
 This image uses environment variables for configuration.
 
-|Available variables |Default value |Description                                         |
-|--------------------|--------------|----------------------------------------------------|
-|`JWT_TOKEN`         |no default    |The JSON Web Token from your JWT app (see [Important Notes](#Important-Notes))    |
-|`CRON_SETTINGS`     |`0 5 * * *`   |Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download. **IMPORTANT: the time is in UTC**. |
-
+| Available variables   | Default value    | Description                                                                                                                                               |
+|-----------------------|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `JWT_TOKEN`           | no default       | The JSON Web Token from your JWT app (see [Important Notes](#Important-Notes))                                                                            |
+| `TZ`                  | Europe/Amsterdam | Time Zone                                                                                                                                                 | 
+| `CRON_SETTINGS`       | `0 5 * * *`      | Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download. **IMPORTANT: the time is in UTC**. |
 
 ## Important Notes ##
 
