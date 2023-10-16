@@ -13,11 +13,17 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 ARG CRON_SETTINGS="0 5 * * *"
 ENV CRON_SETTINGS=${CRON_SETTINGS}
 
-# JWT Token
-ARG JWT_TOKEN
-ENV JWT_TOKEN=${JWT_TOKEN}
+# Server-to-Server OAuth app credentials
+ARG ZOOM_CLIENT_ID
+ENV ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
 
-# Download folder
+ARG ZOOM_CLIENT_SECRET
+ENV ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
+
+ARG ZOOM_ACCOUNT_ID
+ENV ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
+
+# Download directory
 ENV DOWNLOAD_DIRECTORY="/downloads"
 VOLUME ["/downloads"]
 

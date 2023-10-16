@@ -10,47 +10,87 @@ This is useful for instance when managing a Zoom account with several users, tha
 
 The python code has been forked (and adapted) from [zoom-recording-downloader](https://github.com/ricardorodrigues-ca/zoom-recording-downloader) by [Ricardo Rodrigues](https://github.com/ricardorodrigues-ca).
 
-# How to use?
+## Screenshot ##
+![screenshot](screenshot.png)
 
-Simply build the image using `docker build -t zoom-recording-downloader .`
+## Prerequisites ##
 
-and run it with all needed parameters:
+_Attention: You will need a [Zoom Developer account](https://marketplace.zoom.us/) in order to create a [Server-to-Server OAuth app](https://developers.zoom.us/docs/internal-apps) with the required credentials_
+
+1. Create a [server-to-server OAuth app](https://marketplace.zoom.us/user/build), set up your app and collect your credentials (`Account ID`, `Client ID`, `Client Secret`). For questions on this, [reference the docs](https://developers.zoom.us/docs/internal-apps/create/) on creating a server-to-server app. Make sure you activate the app. Follow Zoom's [set up documentation](https://marketplace.zoom.us/docs/guides/build/server-to-server-oauth-app/) or [this video](https://www.youtube.com/watch?v=OkBE7CHVzho) for a more complete walk through.
+
+2. Add the necessary scopes to your app. In your app's _Scopes_ tab, add the following scopes: `account:master`, `account:read:admin`, `account:write:admin`, `information_barriers:read:admin`, `information_barriers:read:master`, `information_barriers:write:admin`, `information_barriers:write:master`, `meeting:master`, `meeting:read:admin`, `meeting:read:admin:sip_dialing`, `meeting:write:admin`, `meeting_token:read:admin:live_streaming`, `meeting_token:read:admin:local_archiving`, `meeting_token:read:admin:local_recording`, `recording:master`, `recording:read:admin`, `recording:write:admin`, `user:master`, `user:read:admin`, `user:write:admin`.
+
+## Command line
+
+1. Set environment variables (see [Environment Variables](#Environment-Variables)).
+
+2. Run:
+
+```sh
+python3 zoom-recording-downloader.py
+```
+
+This will download the recordings that have not been downloaded yet and delete them from the cloud. If you don't want to delete them, specify the parameter `--no-delete`.
+
+# Docker
+
+1. Build the image using `docker build -t zoom-recording-downloader .`
+
+2. Run it with all needed parameters:
 
 ```console
 docker run -d \
     -v [HOST DOWNLOAD FOLDER]:/downloads \
     --name zoom-recording-downloader \
     -e TZ=Europe/Amsterdam \
-    -e JWT_TOKEN=$JWT_TOKEN \
-    -e CRON_SETTINGS="0 17 * * *" \
+    -e ZOOM_CLIENT_ID=$ZOOM_CLIENT_ID \
+    -e ZOOM_CLIENT_SECRET=$ZOOM_CLIENT_SECRET \
+    -e ZOOM_ACCOUNT_ID=$ZOOM_ACCOUNT_ID \
+    -e CRON_SETTINGS="0 7 * * *" \
     zoom-recording-downloader:latest
 ```
 
-where JWT_TOKEN env variable is the JSON Web Token (see [Important Notes](#Important-Notes)).
+Or docker-compose:
+
+```yaml
+version: "3.9"
+
+services:
+
+  zoom-recording-downloader:
+    container_name: ZoomRecordingDownloader
+    image: alborworld/zoom-recording-downloader
+    environment:
+      - TZ=Europe/Amsterdam
+      - CRON_SETTINGS=0 7 * * *
+      - DOWNLOAD_DIRECTORY=/downloads
+      - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
+      - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
+      - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
+    volumes:
+      - /LOCAL/DOWNLOAD/DIRECTORY:/downloads:rw
+    restart: unless-stopped
+```
+
+where (see [Environment Variables](#Environment-Variables)):
+- `TZ`: Time Zone.
+- `CRON_SETTINGS`: cron time string specifying when to execute the download.
+- `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET` and `ZOOM_ACCOUNT_ID` are your Server-to-Server OAuth app credentials.
 
 Note that a host folder where the recordings will be stored must be bind mounted to the `/downloads` folder within the container.
 
-That's it.
-
 ## Environment variables
 
-This image uses environment variables for configuration.
+ZoomRecordingDownloader uses the following environment variables for configuration.
 
-| Available variables   | Default value    | Description                                                                                                                                               |
-|-----------------------|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `JWT_TOKEN`           | no default       | The JSON Web Token from your JWT app (see [Important Notes](#Important-Notes))                                                                            |
-| `TZ`                  | Europe/Amsterdam | Time Zone                                                                                                                                                 | 
-| `CRON_SETTINGS`       | `0 5 * * *`      | Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download. **IMPORTANT: the time is in UTC**. |
-
-## Important Notes ##
-
-_Attention: You will require a [Zoom Developer account](https://marketplace.zoom.us/) in order to create a [JWT app](https://marketplace.zoom.us/docs/guides/build/jwt-app) with your token_
-
-To execute the container you need a variable called `JWT_TOKEN` that contains the JSON Web Token from your JWT app:
-
-    $ export JWT_TOKEN = 'your_token_goes_here'
-
-*Make sure that the token has an expiration time quite far in the future.*
+| Available variables   | Default value    | Description                                                                             |
+|-----------------------|------------------|-----------------------------------------------------------------------------------------|
+| `ZOOM_CLIENT_ID`      | no default       | Zoom Client ID (to be found in the Server-to-Server OAuth app config)                   |
+| `ZOOM_CLIENT_SECRET`  | no default       | Zoom Client Secret (to be found in the Server-to-Server OAuth app config)               |
+| `ZOOM_ACCOUNT_ID`     | no default       | Zoom Account Id (to be found in the Server-to-Server OAuth app config)                  |
+| `TZ`                  | Europe/Amsterdam | Time Zone                                                                               | 
+| `CRON_SETTINGS`       | `0 5 * * *`      | Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download. |
 
 # Synology DiskStation
 
@@ -60,7 +100,5 @@ The docker container can be used with any other environment, however here follow
 To set it up you need to use the Synology Docker app, download the image, launch it and specify (in *Advanced Settings*):
 1. *Enable auto-restart*
 1. Under *Volume* add the folder where you want the recordings, and bind it to the /downloads container folder
-1. Under *Environment* set:
-    * CRON_SETTINGS with the job settings you want (see Wikipedia for the syntax)
-    * JWT_TOKEN with your JSON Web Token (with an expiration time quite far in the future)
+1. Under *Environment* set the environment variables specified above.
    

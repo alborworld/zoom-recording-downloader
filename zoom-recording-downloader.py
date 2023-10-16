@@ -5,213 +5,294 @@
 # Description:  Zoom Recording Downloader is a cross-platform Python script
 #               that uses Zoom's API (v2) to download and organize all
 #               cloud recordings from a Zoom account onto local storage.
-#               This Python script uses the JSON Web Token (JWT)
-#               method of accessing the Zoom API
+#               This Python script uses Server-to-Server OAuth
+#               (see https://developers.zoom.us/docs/internal-apps/) method of
+#               accessing the Zoom API.
 # Created:      2021-05-29
 # Author:       Alessandro Bortolussi
 # Website:      https://github.com/alborworld/zoom-recording-downloader
 # Forked from:  https://github.com/ricardorodrigues-ca/zoom-recording-downloader
 #
 # Environment variables:
-# JWT_TOKEN: the JWT token to use
+# ZOOM_CLIENT_ID:
+# ZOOM_CLIENT_SECRET:
+# ZOOM_ACCOUNT_ID:
 # DOWNLOAD_DIRECTORY: the directory where to download the recordings
 #
 # Parameters:
-# --no-delete: doesn't delete the recordings in the Zoom account
+# --no-delete: doesn't delete the recordings in the Zoom account (optional)
 
 import argparse
-from tqdm import tqdm
+import base64
+import json
+
 from sys import exit
-from signal import signal, SIGINT
-from dateutil.parser import parse
-from datetime import date, timedelta, datetime
+import signal
+import re as regex
+from datetime import datetime, timedelta
+import dateutil.parser
 import requests
 import os
-import time
-from os import environ
+import pathvalidate as path_validate
+import sys as system
+import tqdm as progress_bar
 
-APP_VERSION = "3.1"
-
-if environ.get('JWT_TOKEN') is None:
-    print("Error: environment variable JWT_TOKEN not defined.")
-    exit(1)
-
-ACCESS_TOKEN = 'Bearer ' + os.environ.get('JWT_TOKEN')
-
-if environ.get('DOWNLOAD_DIRECTORY') is None:
-    print("Error: environment variable DOWNLOAD_DIRECTORY not defined.")
-    exit(1)
+APP_VERSION = "3.0 (OAuth)"
 
 DOWNLOAD_DIRECTORY = os.environ.get('DOWNLOAD_DIRECTORY')
 
+if not DOWNLOAD_DIRECTORY:
+    print("Error: Environment variable DOWNLOAD_DIRECTORY not defined.")
+    exit(1)
 
-AUTHORIZATION_HEADER = {'Authorization': ACCESS_TOKEN}
-ACCESS_TOKEN_URL_PARAMETER = "?access_token=" + os.environ.get('JWT_TOKEN')
-API_ENDPOINT_USER_LIST = 'https://api.zoom.us/v2/users'
+CLIENT_ID = os.environ.get('ZOOM_CLIENT_ID')
+CLIENT_SECRET = os.environ.get('ZOOM_CLIENT_SECRET')
+ACCOUNT_ID = os.environ.get('ZOOM_ACCOUNT_ID')
 
+if not CLIENT_ID or not CLIENT_SECRET or not ACCOUNT_ID:
+    print(
+        "Error: ZOOM_CLIENT_ID or ZOOM_CLIENT_SECRET or ZOOM_ACCOUNT_ID not defined.")
+    exit(1)
+
+API_ENDPOINT = "https://api.zoom.us/v2/"
+
+RECORDING_START_YEAR = datetime.today().year
+RECORDING_START_MONTH = 1
+RECORDING_START_DAY = 1
+RECORDING_END_DATE = datetime.today()
 COMPLETED_MEETING_IDS_LOG = 'completed-downloads.log'
 COMPLETED_MEETING_IDS = set()
 
 
-# Define class for text colouring and highlighting
-class color:
-    PURPLE = '\033[95m'
-    CYAN = '\033[96m'
-    DARKCYAN = '\033[36m'
-    BLUE = '\033[94m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    END = '\033[0m'
+class Color:
+    PURPLE = "\033[95m"
+    CYAN = "\033[96m"
+    DARK_CYAN = "\033[36m"
+    BLUE = "\033[94m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    END = "\033[0m"
 
 
-def API_ENDPOINT_RECORDING_LIST(email):
-    API_ENDPOINT = 'https://api.zoom.us/v2/users/' + email + '/recordings'
-    return API_ENDPOINT
+def load_access_token():
+    """ OAuth function, thanks to https://github.com/freelimiter
+    """
+    url = f"https://zoom.us/oauth/token?grant_type=account_credentials&account_id={ACCOUNT_ID}"
 
+    client_cred = f"{CLIENT_ID}:{CLIENT_SECRET}"
+    client_cred_base64_string = base64.b64encode(
+        client_cred.encode("utf-8")).decode("utf-8")
 
-def API_ENDPOINT_MEETING_RECORDING(meeting_id):
-    API_ENDPOINT = 'https://api.zoom.us/v2/meetings/' + meeting_id + \
-                   '/recordings'
-    return API_ENDPOINT
-
-
-def get_credentials(host_id, page_number, rec_start_date):
-    return {
-        'host_id': host_id,
-        'page_number': page_number,
-        'from': rec_start_date,
+    headers = {
+        "Authorization": f"Basic {client_cred_base64_string}",
+        "Content-Type": "application/x-www-form-urlencoded"
     }
 
+    response = json.loads(requests.request("POST", url, headers=headers).text)
 
-def get_user_ids():
-    # Det total page count, convert to integer, increment by 1
-    response = requests.get(url=API_ENDPOINT_USER_LIST,
+    global ACCESS_TOKEN
+    global AUTHORIZATION_HEADER
+
+    try:
+        ACCESS_TOKEN = response["access_token"]
+        AUTHORIZATION_HEADER = {
+            "Authorization": f"Bearer {ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+
+    except KeyError:
+        print(f"{Color.RED}### The key 'access_token' wasn't found.{Color.END}")
+
+
+def get_users():
+    api_endpoint_user_list = API_ENDPOINT + "/users"
+
+    """ loop through pages and return all users
+    """
+    response = requests.get(url=api_endpoint_user_list,
                             headers=AUTHORIZATION_HEADER)
+
+    if not response.ok:
+        print(response)
+        print(
+            f"{Color.RED}### Could not retrieve users. Please make sure that your access "
+            f"token is still valid{Color.END}"
+        )
+
+        system.exit(1)
+
     page_data = response.json()
+    total_pages = int(page_data["page_count"]) + 1
 
-    if 'message' in page_data:
-        print("Failed downloading recording: %s" % page_data['message'])
-        return None
+    all_users = []
 
-    total_pages = int(page_data['page_count']) + 1
-
-    # Results will be appended to this list
-    all_entries = []
-
-    # Loop through all pages and return user data
     for page in range(1, total_pages):
-        url = API_ENDPOINT_USER_LIST + "?page_number=" + str(page)
+        url = f"{api_endpoint_user_list}?page_number={str(page)}"
         user_data = requests.get(url=url, headers=AUTHORIZATION_HEADER).json()
-        user_ids = [(user['email'], user['id'], user['first_name'],
-                     user['last_name']) for user in user_data['users']]
-        all_entries.extend(user_ids)
-        data = all_entries
+        users = ([
+            (
+                user["email"],
+                user["id"],
+                user["first_name"],
+                user["last_name"]
+            )
+            for user in user_data["users"]
+        ])
+
+        all_users.extend(users)
         page += 1
-    return data
+
+    return all_users
 
 
-def format_filename(recording, file_type, recording_type):
-    topic = recording['topic'].replace('/', '&')
+def format_filename(params):
+    file_extension = params["file_extension"]
+    recording = params["recording"]
+    recording_type = params["recording_type"]
+
+    invalid_chars_pattern = r'[<>:"/\\|?*\x00-\x1F]'
+    topic = regex.sub(invalid_chars_pattern, '', recording["topic"])
     rec_type = recording_type.replace("_", " ").title()
-    meeting_time = parse(recording['start_time'])
+    meeting_datetime = dateutil.parser.parse(recording["start_time"])
+
     return '{} - {} UTC - {}.{}'.format(
-        meeting_time.strftime('%Y.%m.%d'), meeting_time.strftime('%I.%M %p'),
-        topic + " - " + rec_type, file_type.lower())
+        meeting_datetime.strftime('%Y.%m.%d'), meeting_datetime.strftime('%I.%M %p'),
+        topic + " - " + rec_type, file_extension)
 
 
 def get_downloads(recording):
+    if not recording.get("recording_files"):
+        raise Exception
+
     downloads = []
-    for download in recording['recording_files']:
-        file_type = download['file_type']
+    for download in recording["recording_files"]:
+        file_type = download["file_type"]
+        file_extension = download["file_extension"]
+        recording_id = download["id"]
+
         if file_type == "":
-            recording_type = 'incomplete'
+            recording_type = "incomplete"
         elif file_type != "TIMELINE":
-            recording_type = download['recording_type']
+            recording_type = download["recording_type"]
         else:
-            recording_type = download['file_type']
-        # Must append JWT token to download_url
-        download_url = download['download_url'] + ACCESS_TOKEN_URL_PARAMETER
-        downloads.append((file_type, download_url, recording_type))
+            recording_type = download["file_type"]
+
+        # must append access token to download_url
+        download_url = f"{download['download_url']}?access_token={ACCESS_TOKEN}"
+        downloads.append((file_type, file_extension, download_url,
+                          recording_type, recording_id))
+
     return downloads
 
 
 def get_recordings(email, page_size, rec_start_date, rec_end_date):
     return {
-        'userId':       email,
-        'page_size':    page_size,
-        'from':         rec_start_date,
-        'to':           rec_end_date
+        "userId": email,
+        "page_size": page_size,
+        "from": rec_start_date,
+        "to": rec_end_date
     }
 
 
+def per_delta(start, end, delta):
+    """ Generator used to create deltas for recording start and end dates
+    """
+    curr = start
+    while curr < end:
+        yield curr, min(curr + delta, end)
+        curr += delta
+
+
 def list_recordings(email):
+    """ Start date now split into YEAR, MONTH, and DAY variables (Within 6 month range)
+        then get recordings within that range
+    """
     recordings = []
 
-    # Get recordings from the last month
-    post_data = get_recordings(email, 300, date.today() - timedelta(30), date.today())
-    response = requests.get(url=API_ENDPOINT_RECORDING_LIST(email),
-                            headers=AUTHORIZATION_HEADER, params=post_data)
-    recordings_data = response.json()
-    recordings.extend(recordings_data['meetings'])
+    for start, end in per_delta(
+            datetime(RECORDING_START_YEAR, RECORDING_START_MONTH,
+                     RECORDING_START_DAY),
+            RECORDING_END_DATE,
+            timedelta(days=30)
+    ):
+        post_data = get_recordings(email, 300, start, end)
+        response = requests.get(
+            url=f"{API_ENDPOINT}/users/{email}/recordings",
+            headers=AUTHORIZATION_HEADER,
+            params=post_data
+        )
+        recordings_data = response.json()
+        recordings.extend(recordings_data["meetings"])
+
     return recordings
 
 
 def download_recording(download_url, email, filename, subfolder):
-    dl_dir = os.sep.join([DOWNLOAD_DIRECTORY, email,
-                          subfolder])
-    full_filename = os.sep.join([dl_dir, filename])
-    os.makedirs(dl_dir, exist_ok=True)
+    dl_dir = os.sep.join([os.path.abspath(os.path.expanduser(os.environ.get('DOWNLOAD_DIRECTORY'))), email, subfolder])
+    sanitized_download_dir = path_validate.sanitize_filepath(dl_dir)
+    sanitized_filename = path_validate.sanitize_filename(filename)
+    full_filename = os.sep.join([sanitized_download_dir, sanitized_filename])
+
+    os.makedirs(sanitized_download_dir, exist_ok=True)
+
     response = requests.get(download_url, stream=True)
 
-    # Total size in bytes.
-    total_size = int(response.headers.get('content-length', 0))
+    # total size in bytes.
+    total_size = int(response.headers.get("content-length", 0))
     block_size = 32 * 1024  # 32 Kibibytes
 
-    # Create TQDM progress bar
-    t = tqdm(total=total_size, unit='iB', unit_scale=True)
+    # create TQDM progress bar
+    prog_bar = progress_bar.tqdm(total=total_size, unit="iB", unit_scale=True)
     try:
-        with open(full_filename, 'wb') as fd:
-            # With open(os.devnull, 'wb') as fd:  # write to dev/null when
-            # testing
+        with open(full_filename, "wb") as fd:
             for chunk in response.iter_content(block_size):
-                t.update(len(chunk))
+                prog_bar.update(len(chunk))
                 fd.write(chunk)  # write video chunk to disk
-        t.close()
+        prog_bar.close()
+
+        print(f"Saved as: {os.sep.join([email, subfolder, sanitized_filename])}")
+
         return True
+
     except Exception as e:
-        # If there was some exception, print the error and return False
-        print(e)
+        print(
+            f"{Color.RED}### The video recording with filename '{filename}' for user with email "
+            f"'{email}' could not be downloaded because {Color.END}'{e}'"
+        )
+
         return False
-
-
-def delete_meeting_recordings(meeting_id):
-    response = requests.delete(url=API_ENDPOINT_MEETING_RECORDING(
-        meeting_id) + ACCESS_TOKEN_URL_PARAMETER)
-
-    if response.status_code != 204:
-        print("WARNING: couldn't delete cloud recordings of meeeting %s" %
-              meeting_id)
 
 
 def load_completed_meeting_ids():
     try:
         with open(COMPLETED_MEETING_IDS_LOG, 'r') as fd:
-            for line in fd:
-                COMPLETED_MEETING_IDS.add(line.strip())
+            [COMPLETED_MEETING_IDS.add(line.strip()) for line in fd]
+
     except FileNotFoundError:
-        print("Log file not found. Creating new log file: ",
-              COMPLETED_MEETING_IDS_LOG)
-        print()
+        print(
+            f"{Color.DARK_CYAN}Log file not found. Creating new log file: {Color.END}"
+            f"{COMPLETED_MEETING_IDS_LOG}\n"
+        )
 
 
-def handler(signal_received, frame):
-    # Handle cleanup here
-    print(color.RED + "\nSIGINT or CTRL-C detected. Exiting gracefully." +
-          color.END)
-    exit(0)
+def delete_meeting_recordings(meeting_id):
+    url = (API_ENDPOINT + "/meetings/{}/recordings").format(meeting_id)
+
+    response = requests.delete(url=url, headers=AUTHORIZATION_HEADER)
+
+    if response.status_code != 204:
+        print("WARNING: couldn't delete cloud recordings of meeting {}".format(
+            meeting_id))
+
+
+def handle_graceful_shutdown(signal_received, frame):
+    print(
+        f"\n{Color.DARK_CYAN}SIGINT or CTRL-C detected. system.exiting gracefully.{Color.END}")
+
+    system.exit(0)
 
 
 # ################################################################
@@ -219,91 +300,109 @@ def handler(signal_received, frame):
 # ################################################################
 
 def main(delete_recordings):
-
     # Clear the screen buffer
     os.system('cls' if os.name == 'nt' else 'clear')
 
     # Show the logo
-    print('''
+    print(f"""
+        {Color.DARK_CYAN}
 
-                               ,*****************.
-                            *************************
-                          *****************************
-                        *********************************
-                       ******               ******* ******
-                      *******                .**    ******
-                      *******                       ******/
-                      *******                       /******
-                      ///////                 //    //////
-                       ///////*              ./////.//////
-                        ////////////////////////////////*
-                          /////////////////////////////
-                            /////////////////////////
-                               ,/////////////////
 
-                           Zoom Recording Downloader
+                             ,*****************.
+                          *************************
+                        *****************************
+                      *********************************
+                     ******               ******* ******
+                    *******                .**    ******
+                    *******                       ******/
+                    *******                       /******
+                    ///////                 //    //////
+                    ///////*              ./////.//////
+                     ////////////////////////////////*
+                       /////////////////////////////
+                          /////////////////////////
+                             ,/////////////////
 
-                                  Version {}
-'''.format(APP_VERSION))
+                        Zoom Recording Downloader
+
+                            Version {APP_VERSION}
+
+        {Color.END}
+    """)
+
+    load_access_token()
 
     load_completed_meeting_ids()
 
-    print((color.BOLD + color.GREEN + "\n*** Starting at %s ***" + color.END + "\n") % datetime.now())
+    print((Color.BOLD + Color.GREEN + "\n*** Starting at %s ***" + Color.END + "\n") % datetime.now())
 
-    print(color.BOLD + "Getting user accounts..." + color.END)
-    users = get_user_ids()
-
-    # If no users are found, exit
-    if users == None:
-        exit(0)
+    print(Color.BOLD + "Getting user accounts..." + Color.END)
+    users = get_users()
 
     for email, user_id, first_name, last_name in users:
-        print(color.BOLD + "\nGetting recording list for {} {} ({})"
-              .format(first_name.encode('utf-8'), last_name.encode('utf-8'),
-                      email) + color.END)
+        userInfo = (
+            f"{first_name} {last_name} - {email}" if first_name and last_name else f"{email}"
+        )
+        print(f"\n{Color.BOLD}Getting recording list for {userInfo}{Color.END}")
 
-        # Wait n.n seconds so we don't breach the API rate limit
-        time.sleep(0.1)
-
-        #recordings = list_recordings(user_id)
-        recordings = list_recordings(email)
+        recordings = list_recordings(user_id)
         total_count = len(recordings)
-        print("==> Found {} recordings".format(total_count))
+        print(f"==> Found {total_count} recordings")
 
         for index, recording in enumerate(recordings):
             success = False
-
-            meeting_id = recording['uuid']
+            meeting_id = recording["uuid"]
             if meeting_id in COMPLETED_MEETING_IDS:
-                print("==> Skipping already downloaded meeting: {}"
-                      .format(meeting_id))
+                print("==> Skipping already downloaded meeting: {}".format(
+                    meeting_id))
                 continue
 
-            downloads = get_downloads(recording)
+            try:
+                downloads = get_downloads(recording)
+            except Exception:
+                print(
+                    f"{Color.RED}### Recording files missing for call with id {Color.END}"
+                    f"'{recording['id']}'\n"
+                )
 
-            for file_type, download_url, recording_type in downloads:
+                continue
+
+            for file_type, file_extension, download_url, recording_type, recording_id in downloads:
                 if recording_type != 'incomplete':
-                    filename = format_filename(
-                        recording, file_type, recording_type)
-                    topic = topic = recording['topic'].replace('/', '&')
-                    # Truncate URL to 64 characters
+                    filename = (
+                        format_filename({
+                            "file_type": file_type,
+                            "recording": recording,
+                            "file_extension": file_extension.lower(),
+                            "recording_type": recording_type
+                        })
+                    )
+                    topic = recording['topic'].replace('/', '&')
+
+                    # truncate URL to 64 characters
                     truncated_url = download_url[0:64] + "..."
-                    print("==> Downloading ({} of {}) as {}: {}: {}".format(
-                        index + 1, total_count, recording_type, meeting_id,
-                        truncated_url))
-                    success |= download_recording(download_url, email, filename,
-                                                  topic)
+                    print(
+                        f"==> Downloading ({index + 1} of {total_count}) as {recording_type}: "
+                        f"{recording_id}: {truncated_url}"
+                    )
+                    success |= download_recording(download_url, email, filename, topic)
+
                 else:
-                    print("### Incomplete Recording ({} of {}) for {}"
-                          .format(index+1, total_count, meeting_id))
+                    print(
+                        f"{Color.RED}### Incomplete Recording ({index + 1} of {total_count}) for "
+                        f"recording with id {Color.END}'{recording_id}'"
+                    )
                     success = False
 
             if success:
                 # Delete the recordings only if parameter --no-delete has not been specified
                 if delete_recordings:
-                    print("==> Deleting cloud recording ({}): {}".format(index + 1,
-                                                                        meeting_id))
+                    print("==> Deleting cloud recording ({}): {}".format(
+                        index + 1, meeting_id))
                     delete_meeting_recordings(meeting_id)
+                else:
+                    print("==> Keeping cloud recording ({}): {}".format(
+                        index + 1, meeting_id))
 
                 # Write the ID of this recording to the completed file
                 with open(COMPLETED_MEETING_IDS_LOG, 'a') as log:
@@ -312,19 +411,22 @@ def main(delete_recordings):
                     log.write('\n')
                     log.flush()
 
-    print(color.BOLD + color.GREEN + "\n*** All done! ***" + color.END)
-    print((color.BOLD + color.GREEN + "\n*** Ending at %s ***" + color.END + "\n") % datetime.now())
+    print(Color.BOLD + Color.GREEN + "\n*** All done! ***" + Color.END)
+    print((
+                  Color.BOLD + Color.GREEN + "\n*** Ending at %s ***" + Color.END + "\n") % datetime.now())
     save_location = os.path.abspath(DOWNLOAD_DIRECTORY)
-    print(color.BLUE + "\nRecordings have been saved to: " +
-          color.UNDERLINE + "{}".format(save_location) + color.END + "\n")
+    print(Color.BLUE + "\nRecordings have been saved to: " +
+          Color.UNDERLINE + "{}".format(save_location) + Color.END + "\n")
 
 
 if __name__ == "__main__":
-    # Tell Python to run the handler() function when SIGINT is received
-    signal(SIGINT, handler)
+    # Tell Python to shut down gracefully when SIGINT is received
+    signal.signal(signal.SIGINT, handle_graceful_shutdown)
 
     parser = argparse.ArgumentParser(description="My parser")
-    parser.add_argument('--no-delete', dest='delete_recordings', default=True, action='store_false', help="Don't delete the recordings in the Zoom account")
+    parser.add_argument('--no-delete', dest='delete_recordings', default=True,
+                        action='store_false',
+                        help="Don't delete the recordings in the Zoom account")
 
     args = parser.parse_args()
 
