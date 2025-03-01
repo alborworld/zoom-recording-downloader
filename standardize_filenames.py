@@ -85,6 +85,8 @@ def rename_file(file_name, folder_name):
         file_type = "Chat File"
         # Just in case...
         file_name = file_name.replace(".chat", ".txt")
+    elif ".vtt" in file_name:
+        file_type = "Closed Captions"
     else:
         # If the file type is not recognized, retain the original file name
         return file_name
