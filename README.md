@@ -37,6 +37,8 @@ This will download the recordings that have not been downloaded yet and delete t
 
 1. Build the image using `docker build -t zoom-recording-downloader .`
 
+    - Don't forget to build it for the right CPU. E.g. If you run it on a Mac with M processor, and want to deploy the docker container on an amd64 platform, do `docker buildx build --platform linux/amd64 -t zoom-recording-downloader .`
+
 2. Run it with all needed parameters:
 
 ```console
