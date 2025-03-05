@@ -37,7 +37,7 @@ import pathvalidate as path_validate
 import sys as system
 import tqdm as progress_bar
 
-APP_VERSION = "3.0 (OAuth)"
+APP_VERSION = "3.1 (OAuth)"
 
 DOWNLOAD_DIRECTORY = os.environ.get('DOWNLOAD_DIRECTORY')
 
@@ -278,6 +278,45 @@ def load_completed_meeting_ids():
         )
 
 
+def get_meeting_summary(meeting_id):
+    url = (API_ENDPOINT + "/meetings/{}/meeting_summary").format(meeting_id)
+
+    response = requests.get(url, headers=AUTHORIZATION_HEADER)
+    
+    if response.status_code == 200:
+        return response.json()
+    elif response.status_code == 404:
+        print(f"{Color.YELLOW}### No summary available for meeting ID {meeting_id}.{Color.END}")
+        return None
+    else:
+        print(f"{Color.RED}### Error fetching summary for meeting ID {meeting_id}: {response.text}{Color.END}")
+        return None
+
+
+def save_meeting_summary(summary, email, filename, subfolder):
+    if not summary:
+        return
+    summary_text = f"Title: {summary.get('summary_title', 'N/A')}\n\n"
+    summary_text += f"Overview: {summary.get('summary_overview', 'N/A')}\n\n"
+    summary_details = summary.get('summary_details', [])
+    if summary_details:
+        summary_text += "Details:\n"
+        for detail in summary_details:
+            summary_text += f"- {detail.get('label', 'N/A')}: {detail.get('summary', 'N/A')}\n"
+    next_steps = summary.get('next_steps', [])
+    if next_steps:
+        summary_text += "\nNext Steps:\n"
+        for step in next_steps:
+            summary_text += f"- {step}\n"
+
+    dl_dir = os.path.join(os.path.abspath(os.path.expanduser(DOWNLOAD_DIRECTORY)), email, subfolder)
+    os.makedirs(dl_dir, exist_ok=True)
+    filepath = os.path.join(dl_dir, filename)
+    with open(filepath, 'w', encoding='utf-8') as file:
+        file.write(summary_text)
+    print(f"Meeting summary saved as: {os.path.join(email, subfolder, filename)}")
+
+
 def delete_meeting_recordings(meeting_id):
     url = (API_ENDPOINT + "/meetings/{}/recordings").format(meeting_id)
 
@@ -395,6 +434,18 @@ def main(delete_recordings):
                     success = False
 
             if success:
+                # Retrieve and save meeting summary
+                summary = get_meeting_summary(meeting_id)
+                filename = (
+                    format_filename({
+                        "recording": recording,
+                        "file_extension": "txt",
+                        "recording_type": "summary"
+                    })
+                )
+                if summary:
+                    save_meeting_summary(summary, email, filename,recording['topic'].replace('/', '&'))
+
                 # Delete the recordings only if parameter --no-delete has not been specified
                 if delete_recordings:
                     print("==> Deleting cloud recording ({}): {}".format(
