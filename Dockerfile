@@ -37,5 +37,4 @@ RUN pip3 install --no-cache-dir -r /app/requirements.txt
 COPY zoom-recording-downloader.py /app
 
 # On container startup: setup crontab, start cron and hang on it
-CMD ./crontab_setup.sh && cron && tail -f /dev/null
-
+CMD ./crontab_setup.sh && cron -f

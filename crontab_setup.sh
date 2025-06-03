@@ -7,5 +7,5 @@ set -e
 printenv | sed -E 's/(.*)=(.*)/export \1="\2"/g' > /root/project_env.sh
 
 # Build cron job definition for the root user
-CRON_JOB="$CRON_SETTINGS . /root/project_env.sh && python3 /app/zoom-recording-downloader.py >> /var/log/cron.log 2>&1"
+CRON_JOB="$CRON_SETTINGS . /root/project_env.sh && python3 /app/zoom-recording-downloader.py >> /proc/1/fd/1 2>> /proc/1/fd/2"
 echo "$CRON_JOB" | crontab -
