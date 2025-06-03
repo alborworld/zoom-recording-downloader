@@ -66,12 +66,13 @@ services:
     environment:
       - TZ=Europe/Amsterdam
       - CRON_SETTINGS=0 7 * * *
-      - DOWNLOAD_DIRECTORY=/downloads
       - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
       - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
       - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
+      - LOG_RETENTION_MONTHS=3
     volumes:
       - /LOCAL/DOWNLOAD/DIRECTORY:/downloads:rw
+      - /LOCAL/LOGS/DIRECTORY:/logs:rw
     restart: unless-stopped
 ```
 
@@ -79,8 +80,9 @@ where (see [Environment Variables](#Environment-Variables)):
 - `TZ`: Time Zone.
 - `CRON_SETTINGS`: cron time string specifying when to execute the download.
 - `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET` and `ZOOM_ACCOUNT_ID` are your Server-to-Server OAuth app credentials.
+- `LOG_RETENTION_MONTHS`: the number of months the logs are retain, after being compressed. Default: 3.
 
-Note that a host folder where the recordings will be stored must be bind mounted to the `/downloads` folder within the container.
+Note that a host folder where the recordings will be stored must be bind mounted to the `/downloads` folder within the container. Same for the `/logs` directory.
 
 ## Environment variables
 
