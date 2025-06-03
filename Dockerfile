@@ -2,12 +2,16 @@
 FROM python:latest
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y cron tzdata && \
+RUN apt-get update && apt-get install -y cron tzdata logrotate && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set your timezone
 ENV TZ=Europe/Amsterdam
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Log rotation settings
+ARG LOG_RETENTION_MONTHS=3
+ENV LOG_RETENTION_MONTHS=${LOG_RETENTION_MONTHS}
 
 # Cron settings
 ARG CRON_SETTINGS="0 5 * * *"
@@ -26,6 +30,15 @@ ENV ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
 # Download directory
 ENV DOWNLOAD_DIRECTORY="/downloads"
 VOLUME ["/downloads"]
+
+# Logs directory
+ENV LOG_DIRECTORY="/logs"
+VOLUME ["/logs"]
+RUN mkdir -p /logs
+
+# Setup logrotate configuration
+COPY logrotate.conf /etc/logrotate.d/zoom-recording-downloader
+RUN chmod 644 /etc/logrotate.d/zoom-recording-downloader
 
 # Copy crontab setup script and make it executable
 COPY crontab_setup.sh crontab_setup.sh
