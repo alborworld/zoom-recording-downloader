@@ -1,9 +1,19 @@
 # syntax=docker/dockerfile:1
-FROM python:latest
+FROM python:3.11-alpine
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y cron tzdata logrotate && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# - dcron: Alpine's cron implementation
+# - tzdata: For timezone support
+# - logrotate: For log rotation
+# - gcc, musl-dev, python3-dev: Required for building some Python packages
+RUN apk add --no-cache \
+    dcron \
+    tzdata \
+    logrotate \
+    gcc \
+    musl-dev \
+    python3-dev \
+    && rm -rf /var/cache/apk/*
 
 # Set your timezone
 ENV TZ=Europe/Amsterdam
@@ -41,14 +51,17 @@ RUN mkdir -p /var/log/zoom-recording-downloader && \
 COPY logrotate.conf /etc/logrotate.d/zoom-recording-downloader
 RUN chmod 644 /etc/logrotate.d/zoom-recording-downloader
 
-# Copy crontab setup script and make it executable
-COPY crontab_setup.sh crontab_setup.sh
-RUN chmod +x crontab_setup.sh
+# Copy scripts and make them executable
+COPY crontab_setup.sh /app/crontab_setup.sh
+COPY start.sh /app/start.sh
+RUN chmod +x /app/crontab_setup.sh /app/start.sh
 
 # Setup python script
 COPY requirements.txt /app/requirements.txt
-RUN pip3 install --no-cache-dir -r /app/requirements.txt
+RUN pip3 install --no-cache-dir -r /app/requirements.txt && \
+    # Clean up build dependencies
+    apk del gcc musl-dev python3-dev
 COPY zoom-recording-downloader.py /app
 
-# On container startup: setup crontab, start cron and hang on it
-CMD ./crontab_setup.sh && cron -f
+# On container startup: setup crontab and start cron
+CMD ["/app/start.sh"]
