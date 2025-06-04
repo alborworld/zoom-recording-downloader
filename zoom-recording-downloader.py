@@ -18,6 +18,7 @@
 # ZOOM_CLIENT_SECRET:
 # ZOOM_ACCOUNT_ID:
 # DOWNLOAD_DIRECTORY: the directory where to download the recordings
+# LOG_DIRECTORY: the directory where to store log files
 #
 # Parameters:
 # --no-delete: doesn't delete the recordings in the Zoom account (optional)
@@ -40,10 +41,14 @@ import tqdm as progress_bar
 APP_VERSION = "3.1 (OAuth)"
 
 DOWNLOAD_DIRECTORY = os.environ.get('DOWNLOAD_DIRECTORY')
+LOG_DIRECTORY = os.environ.get('LOG_DIRECTORY', '/var/log/zoom-recording-downloader')
 
 if not DOWNLOAD_DIRECTORY:
     print("Error: Environment variable DOWNLOAD_DIRECTORY not defined.")
     exit(1)
+
+# Ensure log directory exists
+os.makedirs(LOG_DIRECTORY, exist_ok=True)
 
 CLIENT_ID = os.environ.get('ZOOM_CLIENT_ID')
 CLIENT_SECRET = os.environ.get('ZOOM_CLIENT_SECRET')
@@ -60,7 +65,7 @@ RECORDING_START_YEAR = datetime.today().year
 RECORDING_START_MONTH = 1
 RECORDING_START_DAY = 1
 RECORDING_END_DATE = datetime.today()
-COMPLETED_MEETING_IDS_LOG = 'completed-downloads.log'
+COMPLETED_MEETING_IDS_LOG = os.path.join(LOG_DIRECTORY, 'completed-downloads.log')
 COMPLETED_MEETING_IDS = set()
 
 
@@ -276,6 +281,11 @@ def load_completed_meeting_ids():
             f"{Color.DARK_CYAN}Log file not found. Creating new log file: {Color.END}"
             f"{COMPLETED_MEETING_IDS_LOG}\n"
         )
+        # Ensure the log file is created with proper permissions
+        os.makedirs(os.path.dirname(COMPLETED_MEETING_IDS_LOG), exist_ok=True)
+        with open(COMPLETED_MEETING_IDS_LOG, 'w') as fd:
+            pass
+        os.chmod(COMPLETED_MEETING_IDS_LOG, 0o640)
 
 
 def get_meeting_summary(meeting_id):

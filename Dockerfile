@@ -10,7 +10,7 @@ ENV TZ=Europe/Amsterdam
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Log rotation settings
-ARG LOG_RETENTION_MONTHS=3
+ARG LOG_RETENTION_MONTHS=1
 ENV LOG_RETENTION_MONTHS=${LOG_RETENTION_MONTHS}
 
 # Cron settings
@@ -32,9 +32,10 @@ ENV DOWNLOAD_DIRECTORY="/downloads"
 VOLUME ["/downloads"]
 
 # Logs directory
-ENV LOG_DIRECTORY="/logs"
-VOLUME ["/logs"]
-RUN mkdir -p /logs
+ENV LOG_DIRECTORY="/var/log/zoom-recording-downloader"
+VOLUME ["/var/log/zoom-recording-downloader"]
+RUN mkdir -p /var/log/zoom-recording-downloader && \
+    chmod 0750 /var/log/zoom-recording-downloader
 
 # Setup logrotate configuration
 COPY logrotate.conf /etc/logrotate.d/zoom-recording-downloader

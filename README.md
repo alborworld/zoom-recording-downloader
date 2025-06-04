@@ -69,10 +69,9 @@ services:
       - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
       - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
       - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
-      - LOG_RETENTION_MONTHS=3
     volumes:
       - /LOCAL/DOWNLOAD/DIRECTORY:/downloads:rw
-      - /LOCAL/LOGS/DIRECTORY:/logs:rw
+      - /LOCAL/LOGS/DIRECTORY:/var/log/zoom-recording-downloader:rw
     restart: unless-stopped
 ```
 
@@ -80,21 +79,24 @@ where (see [Environment Variables](#Environment-Variables)):
 - `TZ`: Time Zone.
 - `CRON_SETTINGS`: cron time string specifying when to execute the download.
 - `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET` and `ZOOM_ACCOUNT_ID` are your Server-to-Server OAuth app credentials.
-- `LOG_RETENTION_MONTHS`: the number of months the logs are retain, after being compressed. Default: 3.
+- `LOG_RETENTION_MONTHS`: the number of months the logs are retained, after being compressed. Default: 1 month.
+- `LOG_DIRECTORY`: the directory where log files are stored. Default: /var/log/zoom-recording-downloader.
 
-Note that a host folder where the recordings will be stored must be bind mounted to the `/downloads` folder within the container. Same for the `/logs` directory.
+Note that a host folder where the recordings will be stored must be bind mounted to the `/downloads` folder within the container. Same for the log directory.
 
 ## Environment variables
 
 ZoomRecordingDownloader uses the following environment variables for configuration.
 
-| Available variables   | Default value    | Description                                                                             |
-|-----------------------|------------------|-----------------------------------------------------------------------------------------|
-| `ZOOM_CLIENT_ID`      | no default       | Zoom Client ID (to be found in the Server-to-Server OAuth app config)                   |
-| `ZOOM_CLIENT_SECRET`  | no default       | Zoom Client Secret (to be found in the Server-to-Server OAuth app config)               |
-| `ZOOM_ACCOUNT_ID`     | no default       | Zoom Account Id (to be found in the Server-to-Server OAuth app config)                  |
-| `TZ`                  | Europe/Amsterdam | Time Zone                                                                               | 
-| `CRON_SETTINGS`       | `0 5 * * *`      | Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download. |
+| Available variables   | Default value                        | Description                                                                             |
+|-----------------------|--------------------------------------|-----------------------------------------------------------------------------------------|
+| `ZOOM_CLIENT_ID`      | no default                           | Zoom Client ID (to be found in the Server-to-Server OAuth app config)                   |
+| `ZOOM_CLIENT_SECRET`  | no default                           | Zoom Client Secret (to be found in the Server-to-Server OAuth app config)               |
+| `ZOOM_ACCOUNT_ID`     | no default                           | Zoom Account Id (to be found in the Server-to-Server OAuth app config)                  |
+| `TZ`                  | Europe/Amsterdam                     | Time Zone                                                                               | 
+| `CRON_SETTINGS`       | `0 5 * * *`                          | Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download. |
+| `LOG_RETENTION_MONTHS`| 1                                    | Number of months to retain logs after compression                                       |
+| `LOG_DIRECTORY`       | /var/log/zoom-recording-downloader   | Directory where log files are stored                                                    |
 
 # Synology DiskStation
 
