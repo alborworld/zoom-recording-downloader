@@ -93,8 +93,8 @@ ZoomRecordingDownloader uses the following environment variables for configurati
 | `ZOOM_ACCOUNT_ID`     | no default                           | Zoom Account Id (to be found in the Server-to-Server OAuth app config)                  |
 | `TZ`                  | Europe/Amsterdam                     | Time Zone                                                                               | 
 | `CRON_SETTINGS`       | `0 5 * * *`                          | Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download |
-| `LOG_RETENTION_MONTHS`| 1                                    | Number of months to retain logs after compression                                       |
-| `LOG_DIRECTORY`       | /var/log/zoom-recording-downloader   | Directory where log files are stored                                                    |
+| `LOG_RETENTION_MONTHS`| 3                                    | Number of months to retain logs                                                         |
+| `LOG_DIRECTORY`       | `/var/log/zoom-recording-downloader` | Directory where log files are stored                                                    |
 
 # Synology DiskStation
 

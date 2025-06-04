@@ -10,7 +10,7 @@ ENV TZ=Europe/Amsterdam
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Log rotation settings
-ARG LOG_RETENTION_MONTHS=1
+ARG LOG_RETENTION_MONTHS=3
 ENV LOG_RETENTION_MONTHS=${LOG_RETENTION_MONTHS}
 
 # Cron settings
