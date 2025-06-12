@@ -106,3 +106,12 @@ To set it up you need to use the Synology Docker app, download the image, launch
 1. Under *Volume* add the folder where you want the recordings, and bind it to the /downloads container folder
 1. Under *Environment* set the environment variables specified above.
    
+# 🚧 Roadmap
+
+- [ ] Add automated versioning of docker images
+
+... and much more.
+
+# 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
