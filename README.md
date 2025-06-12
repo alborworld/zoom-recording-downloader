@@ -10,7 +10,6 @@ This is useful for instance when managing a Zoom account with several users, tha
 
 The python code has been forked (and adapted) from [zoom-recording-downloader](https://github.com/ricardorodrigues-ca/zoom-recording-downloader) by [Ricardo Rodrigues](https://github.com/ricardorodrigues-ca).
 
-## Screenshot ##
 ![screenshot](screenshot.png)
 
 ## Prerequisites ##
@@ -33,7 +32,7 @@ python3 zoom-recording-downloader.py
 
 This will download the recordings that have not been downloaded yet and delete them from the cloud. If you don't want to delete them, specify the parameter `--no-delete`.
 
-# Docker
+## Docker
 
 1. Build the image using `docker build -t zoom-recording-downloader .`
 
@@ -96,12 +95,12 @@ ZoomRecordingDownloader uses the following environment variables for configurati
 | `LOG_RETENTION_MONTHS`| 3                                    | Number of months to retain logs                                                         |
 | `LOG_DIRECTORY`       | `/var/log/zoom-recording-downloader` | Directory where log files are stored                                                    |
    
-# 🚧 Roadmap
+## 🚧 Roadmap
 
 - [ ] Add automated versioning of docker images
 
 ... and much more.
 
-# 📄 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
