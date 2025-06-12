@@ -95,16 +95,6 @@ ZoomRecordingDownloader uses the following environment variables for configurati
 | `CRON_SETTINGS`       | `0 5 * * *`                          | Cron time string format (see [Wikipedia](https://en.wikipedia.org/wiki/Cron)) specifying when to execute the download |
 | `LOG_RETENTION_MONTHS`| 3                                    | Number of months to retain logs                                                         |
 | `LOG_DIRECTORY`       | `/var/log/zoom-recording-downloader` | Directory where log files are stored                                                    |
-
-# Synology DiskStation
-
-This project was initially created with the intention to automatically download the Zoom recordings to a Synology DiskStation. 
-The docker container can be used with any other environment, however here follows a small description of what to do in the DiskStation.
-
-To set it up you need to use the Synology Docker app, download the image, launch it and specify (in *Advanced Settings*):
-1. *Enable auto-restart*
-1. Under *Volume* add the folder where you want the recordings, and bind it to the /downloads container folder
-1. Under *Environment* set the environment variables specified above.
    
 # 🚧 Roadmap
 
