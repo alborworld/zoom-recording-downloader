@@ -163,6 +163,10 @@ def format_filename(params):
     rec_type = recording_type.replace("_", " ").title()
     meeting_datetime = dateutil.parser.parse(recording["start_time"])
 
+    # Change .vtt extension to txt
+    if file_extension.lower() == 'vtt':
+        file_extension = '.txt'
+
     return '{} - {} UTC - {}.{}'.format(
         meeting_datetime.strftime('%Y.%m.%d'), meeting_datetime.strftime('%I.%M %p'),
         topic + " - " + rec_type, file_extension)
